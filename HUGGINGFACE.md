@@ -6,12 +6,23 @@ This guide shows you how to use HuggingFace's free Inference API with CodeLlama 
 
 ### 1. Get a HuggingFace API Token
 
+**Option 1: Quick Setup (Recommended for Testing)**
+1. Go to https://huggingface.co/settings/tokens/new?ownUserPermissions=inference.serverless.write&tokenType=fineGrained
+2. Name it "ollm-inference" (or whatever you like)
+3. The permission "Make calls to Inference Providers" should already be selected
+4. Click "Generate token"
+5. Copy the token (starts with `hf_...`)
+
+**Option 2: Manual Setup**
 1. Go to https://huggingface.co/settings/tokens
 2. Click "New token"
-3. Name it "ollm" (or whatever you like)
-4. Select "Read" access
-5. Click "Generate"
-6. Copy the token (starts with `hf_...`)
+3. Select "Fine-grained" token type
+4. Name it "ollm-inference"
+5. Under "Permissions", enable **"Make calls to Inference Providers"**
+6. Click "Generate"
+7. Copy the token (starts with `hf_...`)
+
+**Important**: You need a **fine-grained token** with `inference.serverless.write` permission, not just "Read" access.
 
 ### 2. Set the Environment Variable
 
