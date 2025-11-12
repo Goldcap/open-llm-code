@@ -2,14 +2,14 @@
 # Copy this to ~/.config/open-llm-code/config.toml and customize
 
 [llm]
-# Provider: "anthropic" or "ollama"
-provider = "anthropic"
+# Provider: "anthropic", "ollama", or "huggingface"
+provider = "huggingface"
 
 # Model name
-model = "claude-sonnet-4"
+model = "codellama/CodeLlama-7b-Instruct-hf"
 
-# Environment variable name for API key (Anthropic only)
-api_key_env = "ANTHROPIC_API_KEY"
+# Environment variable name for API key (Anthropic and HuggingFace)
+api_key_env = "HUGGINGFACE_API_KEY"
 
 # Maximum tokens in response
 max_tokens = 4096
@@ -20,6 +20,14 @@ endpoint = "http://localhost:11434"
 
 # Model to use (run `ollama list` to see available models)
 model = "codellama:13b"
+
+[huggingface]
+# HuggingFace Inference API endpoint
+endpoint = "https://api-inference.huggingface.co"
+
+# Model to use (e.g., "codellama/CodeLlama-7b-Instruct-hf")
+# Available models: https://huggingface.co/models?pipeline_tag=text-generation
+model = "codellama/CodeLlama-7b-Instruct-hf"
 
 [opensearch]
 # OpenSearch endpoint URL

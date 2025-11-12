@@ -8,6 +8,8 @@ pub struct Config {
     pub llm: LlmConfig,
     #[serde(default)]
     pub ollama: OllamaConfig,
+    #[serde(default)]
+    pub huggingface: HuggingFaceConfig,
     pub opensearch: OpenSearchConfig,
     #[serde(default)]
     pub mcp_servers: Vec<McpServerConfig>,
@@ -15,11 +17,11 @@ pub struct Config {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmConfig {
-    /// Provider: "anthropic" or "ollama"
+    /// Provider: "anthropic", "ollama", or "huggingface"
     pub provider: String,
     /// Model name
     pub model: String,
-    /// Environment variable name for API key (for Anthropic)
+    /// Environment variable name for API key (for Anthropic and HuggingFace)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api_key_env: Option<String>,
     /// Max tokens in response
@@ -34,6 +36,16 @@ pub struct OllamaConfig {
     pub endpoint: String,
     /// Model to use (e.g., "codellama:13b")
     #[serde(default = "default_ollama_model")]
+    pub model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct HuggingFaceConfig {
+    /// HuggingFace API endpoint (default is Inference API)
+    #[serde(default = "default_huggingface_endpoint")]
+    pub endpoint: String,
+    /// Model to use (e.g., "codellama/CodeLlama-7b-Instruct-hf")
+    #[serde(default = "default_huggingface_model")]
     pub model: String,
 }
 
@@ -71,6 +83,14 @@ fn default_ollama_model() -> String {
 
 fn default_index() -> String {
     "ollm-sessions".to_string()
+}
+
+fn default_huggingface_endpoint() -> String {
+    "https://api-inference.huggingface.co".to_string()
+}
+
+fn default_huggingface_model() -> String {
+    "codellama/CodeLlama-7b-Instruct-hf".to_string()
 }
 
 impl Config {
@@ -114,6 +134,10 @@ impl Config {
             ollama: OllamaConfig {
                 endpoint: "http://localhost:11434".to_string(),
                 model: "codellama:13b".to_string(),
+            },
+            huggingface: HuggingFaceConfig {
+                endpoint: "https://api-inference.huggingface.co".to_string(),
+                model: "codellama/CodeLlama-7b-Instruct-hf".to_string(),
             },
             opensearch: OpenSearchConfig {
                 endpoint: "https://search-example.us-west-2.es.amazonaws.com".to_string(),

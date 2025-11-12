@@ -1,4 +1,5 @@
 pub mod anthropic;
+pub mod huggingface;
 pub mod ollama;
 pub mod types;
 
@@ -45,6 +46,10 @@ pub async fn create_provider(
         }
         "ollama" => {
             let provider = ollama::OllamaProvider::new(config)?;
+            Ok(Box::new(provider))
+        }
+        "huggingface" => {
+            let provider = huggingface::HuggingFaceProvider::new(config)?;
             Ok(Box::new(provider))
         }
         _ => Err(crate::error::OllmError::Config(format!(
