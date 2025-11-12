@@ -1,5 +1,6 @@
 mod config;
 mod error;
+mod llm;
 mod types;
 
 use clap::{Parser, Subcommand};
@@ -34,11 +35,18 @@ enum Commands {
         output: Option<PathBuf>,
     },
 
+    /// Test LLM provider with a simple message
+    Test {
+        /// Message to send
+        message: String,
+    },
+
     /// Show version information
     Version,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging
@@ -64,6 +72,37 @@ fn main() -> Result<()> {
 
             println!("✅ Created example config at: {}", output_path.display());
             println!("Edit this file and add your API keys/credentials");
+            Ok(())
+        }
+
+        Some(Commands::Test { message }) => {
+            println!("🧪 Testing LLM provider...");
+            println!();
+
+            let config = config::Config::load(cli.config)?;
+            println!("Provider: {} ({})", config.llm.provider, config.llm.model);
+
+            let provider = llm::create_provider(&config).await?;
+
+            println!("Sending message: {}", message);
+            println!();
+
+            let user_message = types::Message::new_user(message);
+            let response = provider.chat(vec![user_message], vec![]).await?;
+
+            println!("Response:");
+            for content in response.content {
+                if let types::ContentBlock::Text { text } = content {
+                    println!("{}", text);
+                }
+            }
+            println!();
+            println!("Tokens: {} in, {} out ({})",
+                response.usage.input_tokens,
+                response.usage.output_tokens,
+                response.usage.total()
+            );
+
             Ok(())
         }
 
