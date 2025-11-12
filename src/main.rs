@@ -1,6 +1,7 @@
 mod config;
 mod error;
 mod llm;
+mod mcp;
 mod types;
 
 use clap::{Parser, Subcommand};
@@ -40,6 +41,9 @@ enum Commands {
         /// Message to send
         message: String,
     },
+
+    /// List tools from MCP servers
+    ListTools,
 
     /// Show version information
     Version,
@@ -102,6 +106,32 @@ async fn main() -> Result<()> {
                 response.usage.output_tokens,
                 response.usage.total()
             );
+
+            Ok(())
+        }
+
+        Some(Commands::ListTools) => {
+            println!("🔧 Listing MCP tools...");
+            println!();
+
+            let config = config::Config::load(cli.config)?;
+
+            println!("Loaded {} MCP server configs", config.mcp_servers.len());
+
+            let mut mcp_manager = mcp::McpManager::new();
+
+            mcp_manager.start_servers(config.mcp_servers)?;
+
+            let tools = mcp_manager.get_all_tools();
+
+            println!("Found {} tools from {} servers:", tools.len(), mcp_manager.server_count());
+            println!();
+
+            for tool in tools {
+                println!("📦 {}", tool.name);
+                println!("   {}", tool.description);
+                println!();
+            }
 
             Ok(())
         }

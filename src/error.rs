@@ -8,6 +8,9 @@ pub enum OllmError {
     #[error("LLM provider error: {0}")]
     LlmProvider(String),
 
+    #[error("MCP error: {0}")]
+    Mcp(String),
+
     #[error("MCP protocol error: {0}")]
     McpProtocol(String),
 
