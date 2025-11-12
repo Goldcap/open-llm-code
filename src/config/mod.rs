@@ -86,11 +86,11 @@ fn default_index() -> String {
 }
 
 fn default_huggingface_endpoint() -> String {
-    "https://api-inference.huggingface.co".to_string()
+    "https://router.huggingface.co/v1".to_string()
 }
 
 fn default_huggingface_model() -> String {
-    "codellama/CodeLlama-7b-Instruct-hf".to_string()
+    "Qwen/Qwen2.5-Coder-32B-Instruct".to_string()
 }
 
 impl Config {

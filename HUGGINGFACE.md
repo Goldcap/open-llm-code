@@ -53,7 +53,7 @@ api_key_env = "HUGGINGFACE_API_KEY"
 max_tokens = 500  # Lower for faster responses in free tier
 
 [huggingface]
-endpoint = "https://api-inference.huggingface.co"
+endpoint = "https://router.huggingface.co/v1"
 model = "codellama/CodeLlama-7b-Instruct-hf"
 ```
 

@@ -6,7 +6,7 @@
 provider = "huggingface"
 
 # Model name
-model = "codellama/CodeLlama-7b-Instruct-hf"
+model = "Qwen/Qwen2.5-Coder-32B-Instruct"
 
 # Environment variable name for API key (Anthropic and HuggingFace)
 api_key_env = "HUGGINGFACE_API_KEY"
@@ -22,12 +22,13 @@ endpoint = "http://localhost:11434"
 model = "codellama:13b"
 
 [huggingface]
-# HuggingFace Inference API endpoint
-endpoint = "https://api-inference.huggingface.co"
+# HuggingFace Inference API endpoint (OpenAI-compatible)
+endpoint = "https://router.huggingface.co/v1"
 
-# Model to use (e.g., "codellama/CodeLlama-7b-Instruct-hf")
-# Available models: https://huggingface.co/models?pipeline_tag=text-generation
-model = "codellama/CodeLlama-7b-Instruct-hf"
+# Model to use (Qwen Coder models recommended for code)
+# Good options: Qwen/Qwen2.5-Coder-32B-Instruct, Qwen/Qwen3-Coder-30B-A3B-Instruct
+# Available models: curl https://router.huggingface.co/v1/models
+model = "Qwen/Qwen2.5-Coder-32B-Instruct"
 
 [opensearch]
 # OpenSearch endpoint URL

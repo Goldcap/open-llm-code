@@ -41,8 +41,7 @@ impl HuggingFaceProvider {
         })
     }
 
-    fn convert_messages(&self, messages: Vec<Message>) -> String {
-        // Format messages for instruction-tuned models
+    fn convert_messages(&self, messages: Vec<Message>) -> Vec<HFMessage> {
         messages
             .into_iter()
             .map(|m| {
@@ -59,14 +58,16 @@ impl HuggingFaceProvider {
                     .collect::<Vec<_>>()
                     .join("\n");
 
-                match m.role {
-                    Role::System => format!("System: {}", content),
-                    Role::User => format!("[INST] {} [/INST]", content),
-                    Role::Assistant => content,
+                HFMessage {
+                    role: match m.role {
+                        Role::System => "system".to_string(),
+                        Role::User => "user".to_string(),
+                        Role::Assistant => "assistant".to_string(),
+                    },
+                    content,
                 }
             })
-            .collect::<Vec<_>>()
-            .join("\n")
+            .collect()
     }
 }
 
@@ -83,19 +84,18 @@ impl LlmProvider for HuggingFaceProvider {
             warn!("HuggingFace Inference API does not support tool use - tools will be ignored");
         }
 
-        let prompt = self.convert_messages(messages);
+        let hf_messages = self.convert_messages(messages);
 
+        // Use OpenAI-compatible chat completions API
         let request_body = json!({
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": self.max_tokens,
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "return_full_text": false
-            }
+            "model": self.model,
+            "messages": hf_messages,
+            "max_tokens": self.max_tokens,
+            "temperature": 0.7,
+            "top_p": 0.95
         });
 
-        let url = format!("{}/models/{}", self.endpoint, self.model);
+        let url = format!("{}/chat/completions", self.endpoint);
 
         let response = self
             .client
@@ -119,33 +119,33 @@ impl LlmProvider for HuggingFaceProvider {
             )));
         }
 
-        let hf_response: Vec<HFResponse> = response.json().await.map_err(|e| {
+        let hf_response: HFChatCompletionResponse = response.json().await.map_err(|e| {
             OllmError::LlmProvider(format!("Failed to parse HuggingFace response: {}", e))
         })?;
 
-        if hf_response.is_empty() {
+        if hf_response.choices.is_empty() {
             return Err(OllmError::LlmProvider(
                 "Empty response from HuggingFace".to_string(),
             ));
         }
 
-        let generated_text = hf_response[0].generated_text.clone();
+        let generated_text = hf_response.choices[0].message.content.clone();
 
         info!("Received response from HuggingFace");
-
-        // HuggingFace doesn't provide token counts in the free API
-        // We'll estimate based on characters
-        let estimated_tokens = generated_text.len() / 4;
 
         Ok(ChatResponse {
             content: vec![ContentBlock::Text {
                 text: generated_text,
             }],
-            model: self.model.clone(),
-            stop_reason: Some(StopReason::EndTurn),
+            model: hf_response.model,
+            stop_reason: Some(match hf_response.choices[0].finish_reason.as_str() {
+                "stop" => StopReason::EndTurn,
+                "length" => StopReason::MaxTokens,
+                _ => StopReason::EndTurn,
+            }),
             usage: TokenUsage {
-                input_tokens: 0, // Not provided by HF
-                output_tokens: estimated_tokens,
+                input_tokens: hf_response.usage.prompt_tokens,
+                output_tokens: hf_response.usage.completion_tokens,
             },
         })
     }
@@ -165,20 +165,18 @@ impl LlmProvider for HuggingFaceProvider {
             warn!("HuggingFace Inference API does not support tool use - tools will be ignored");
         }
 
-        let prompt = self.convert_messages(messages);
+        let hf_messages = self.convert_messages(messages);
 
         let request_body = json!({
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": self.max_tokens,
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "return_full_text": false
-            },
+            "model": self.model,
+            "messages": hf_messages,
+            "max_tokens": self.max_tokens,
+            "temperature": 0.7,
+            "top_p": 0.95,
             "stream": true
         });
 
-        let url = format!("{}/models/{}", self.endpoint, self.model);
+        let url = format!("{}/chat/completions", self.endpoint);
 
         let response = self
             .client
@@ -202,14 +200,14 @@ impl LlmProvider for HuggingFaceProvider {
             )));
         }
 
-        // Parse SSE stream from HuggingFace
+        // Parse SSE stream (OpenAI format)
         let stream = response.bytes_stream().map(|chunk_result| {
             chunk_result
                 .map_err(|e| OllmError::LlmProvider(format!("Stream error: {}", e)))
                 .and_then(|chunk| {
                     let text = String::from_utf8_lossy(&chunk);
 
-                    // HuggingFace sends Server-Sent Events
+                    // HuggingFace sends Server-Sent Events like OpenAI
                     if text.starts_with("data: ") {
                         let json_str = text.strip_prefix("data: ").unwrap_or(&text);
 
@@ -217,13 +215,23 @@ impl LlmProvider for HuggingFaceProvider {
                             return Ok(ChatChunk::MessageStop);
                         }
 
-                        serde_json::from_str::<HFStreamChunk>(json_str)
+                        serde_json::from_str::<HFChatCompletionChunk>(json_str)
                             .map_err(|e| OllmError::LlmProvider(format!("Parse error: {}", e)))
-                            .map(|hf_chunk| ChatChunk::ContentBlockDelta {
-                                index: 0,
-                                delta: ContentDelta::TextDelta {
-                                    text: hf_chunk.token.text,
-                                },
+                            .and_then(|hf_chunk| {
+                                if let Some(choice) = hf_chunk.choices.first() {
+                                    if let Some(content) = &choice.delta.content {
+                                        Ok(ChatChunk::ContentBlockDelta {
+                                            index: 0,
+                                            delta: ContentDelta::TextDelta {
+                                                text: content.clone(),
+                                            },
+                                        })
+                                    } else {
+                                        Ok(ChatChunk::Ping)
+                                    }
+                                } else {
+                                    Ok(ChatChunk::Ping)
+                                }
                             })
                     } else {
                         Ok(ChatChunk::Ping)
@@ -251,19 +259,44 @@ impl LlmProvider for HuggingFaceProvider {
     }
 }
 
-// HuggingFace API types
+// HuggingFace API types (OpenAI-compatible)
 
-#[derive(Debug, Deserialize)]
-struct HFResponse {
-    generated_text: String,
+#[derive(Debug, Serialize, Deserialize)]
+struct HFMessage {
+    role: String,
+    content: String,
 }
 
 #[derive(Debug, Deserialize)]
-struct HFStreamChunk {
-    token: HFToken,
+struct HFChatCompletionResponse {
+    model: String,
+    choices: Vec<HFChoice>,
+    usage: HFUsage,
 }
 
 #[derive(Debug, Deserialize)]
-struct HFToken {
-    text: String,
+struct HFChoice {
+    message: HFMessage,
+    finish_reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct HFUsage {
+    prompt_tokens: usize,
+    completion_tokens: usize,
+}
+
+#[derive(Debug, Deserialize)]
+struct HFChatCompletionChunk {
+    choices: Vec<HFChunkChoice>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HFChunkChoice {
+    delta: HFDelta,
+}
+
+#[derive(Debug, Deserialize)]
+struct HFDelta {
+    content: Option<String>,
 }
