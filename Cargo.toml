@@ -1,0 +1,67 @@
+[package]
+name = "open-llm-code"
+version = "0.1.0"
+edition = "2021"
+authors = ["87 Technologies LLC"]
+description = "Rust-based AI coding assistant with pluggable LLM backends and MCP support"
+license = "MIT"
+
+[[bin]]
+name = "ollm"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# HTTP client for LLM APIs
+reqwest = { version = "0.11", features = ["json", "rustls-tls", "stream"] }
+eventsource-stream = "0.2"  # For Server-Sent Events (streaming)
+
+# OpenSearch client (from claude-ltm)
+opensearch = "2.2"
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# UUID and time
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Terminal UI
+rustyline = "13.0"  # REPL with history and editing
+colored = "2.0"     # Terminal colors
+indicatif = "0.17"  # Progress spinners
+
+# Configuration
+config = "0.13"
+toml = "0.8"
+clap = { version = "4.4", features = ["derive"] }
+dirs = "5.0"
+
+# Cryptography (reuse from claude-ltm for session encryption)
+rsa = "0.9"
+rand = "0.8"
+pkcs8 = { version = "0.10", features = ["pem"] }
+sha2 = "0.10"
+base64 = "0.21"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+mockito = "1.2"
+tokio-test = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

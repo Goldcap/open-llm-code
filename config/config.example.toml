@@ -1,0 +1,70 @@
+# Open LLM Code Configuration Example
+# Copy this to ~/.config/open-llm-code/config.toml and customize
+
+[llm]
+# Provider: "anthropic" or "ollama"
+provider = "anthropic"
+
+# Model name
+model = "claude-sonnet-4"
+
+# Environment variable name for API key (Anthropic only)
+api_key_env = "ANTHROPIC_API_KEY"
+
+# Maximum tokens in response
+max_tokens = 4096
+
+[ollama]
+# Ollama API endpoint
+endpoint = "http://localhost:11434"
+
+# Model to use (run `ollama list` to see available models)
+model = "codellama:13b"
+
+[opensearch]
+# OpenSearch endpoint URL
+endpoint = "https://search-claude-ltm-7m5t3scn2lls4drmfth3jpkfaa.us-west-2.es.amazonaws.com"
+
+# Username for authentication
+username = "admin"
+
+# Environment variable name for password
+password_env = "OPENSEARCH_PASSWORD"
+
+# Index name for storing sessions
+index = "ollm-sessions"
+
+# MCP Servers Configuration
+# Add as many servers as you need
+
+[[mcp_servers]]
+name = "claude-ltm"
+command = "cltm-server"
+args = []
+
+[[mcp_servers]]
+name = "aws-eks"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-aws-eks"]
+[mcp_servers.env]
+AWS_REGION = "us-west-2"
+
+[[mcp_servers]]
+name = "kubernetes"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-kubernetes"]
+
+[[mcp_servers]]
+name = "aws-api"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-aws-api"]
+[mcp_servers.env]
+AWS_REGION = "us-west-2"
+
+# Example: Custom MCP server
+# [[mcp_servers]]
+# name = "my-custom-server"
+# command = "/path/to/server"
+# args = ["--option", "value"]
+# [mcp_servers.env]
+# API_KEY = "secret"
